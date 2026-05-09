@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="cordova-plugin-audio-recorder" version="1.0.1" 
+    xmlns="http://apache.org/cordova/ns/plugins/1.0" 
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>AudioRecorder</name>
+    <js-module name="AudioRecorder" src="www/AudioRecorder.js">
+        <clobbers target="AudioRecorder" />
+    </js-module>
+    <platform name="android">
+        <config-file parent="/*" target="res/xml/config.xml">
+            <feature name="AudioRecorder">
+                <param name="android-package" value="CordovaPluginAudioRecorder.AudioRecorder" />
+            </feature>
+        </config-file>
+        <config-file parent="/*" target="AndroidManifest.xml">
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+        </config-file>
+        <source-file src="src/android/AudioRecorder.java" target-dir="src/com/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/DataEncodeThread.java" target-dir="src/com/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/MP3Recorder.java" target-dir="src/com/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/PCMFormat.java" target-dir="src/com/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/RingBuffer.java" target-dir="src/com/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/SimpleLame.java" target-dir="src/com/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/libs/armeabi/libmp3lame.so" target-dir="libs/armeabi" />
+        <source-file src="src/android/libs/armeabi-v7a/libmp3lame.so" target-dir="libs/armeabi-v7a" />
+        <source-file src="src/android/libs/arm64-v8a/libmp3lame.so" target-dir="libs/arm64-v8a" />
+    </platform>
+    <platform name="ios">
+        <config-file parent="/*" target="config.xml">
+            <feature name="AudioRecorder">
+                <param name="ios-package" value="AudioRecorder" />
+            </feature>
+        </config-file>
+        <config-file target="*-Info.plist" parent="NSMicrophoneUsageDescription">
+            <string></string>
+         </config-file>
+        <header-file src="src/ios/AudioRecorder.h"/>
+        <source-file src="src/ios/AudioRecorder.m" />
+        <header-file src="src/ios/lame.h" />
+        <header-file src="src/ios/SimpleLame.h" />
+        <source-file src="src/ios/SimpleLame.m" />
+
+        <source-file src="src/ios/libs/libmp3lame/libmp3lame.a" framework="true" />        
+        <!--<source-file src="src/ios/libs/libmp3lame/libmp3lame-armv7.a" framework="true" />
+        <source-file src="src/ios/libs/libmp3lame/libmp3lame-i386.a" framework="true" />
+        <source-file src="src/ios/libs/libmp3lame/libmp3lame-x86_64.a" framework="true" />-->
+
+        <framework src="AVFoundation.framework" />
+    </platform>
+</plugin>
