@@ -28,7 +28,7 @@
 @property (nonatomic, strong) NSDictionary* setting;
 @property (nonatomic, strong) NSString* playSoundCallbackId;
 @property (nonatomic) int outBitRate;
-@property (nonatomic) int outSampingRate;
+@property (nonatomic) int outSamplingRate;
 @property (nonatomic) BOOL isChatMode;
 @property (nonatomic) BOOL isSave;
 @property (nonatomic) BOOL isRecording;

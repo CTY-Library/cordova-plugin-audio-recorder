@@ -26,7 +26,7 @@
 
 @implementation AudioRecorder
 
-@synthesize setting, avSession, recorder, resourcePath, mp3FilePath, outBitRate, outSampingRate, isSave, isRecording, isChatMode, playSoundCallbackId;
+@synthesize setting, avSession, recorder, resourcePath, mp3FilePath, outBitRate, outSamplingRate, isSave, isRecording, isChatMode, playSoundCallbackId;
 
 - (void) pluginInitialize{
     outSamplingRate = DEFAULT_OUT_SAMPLING_RATE;
@@ -256,7 +256,7 @@
                 unsigned char mp3Buffer[PCM_SIZE];
                 
                 float scale = audioRecorder.isChatMode? 2.0: 1.0;
-                [SimpleLame init:IN_SAMPLING_RATE outSamplerate:audioRecorder.outSampingRate outChannel:1 outBitrate:audioRecorder.outBitRate scale:scale];
+                [SimpleLame init:IN_SAMPLING_RATE outSamplerate:audioRecorder.outSamplingRate outChannel:1 outBitrate:audioRecorder.outBitRate scale:scale];
                 
                 long curPos;
                 BOOL hasSkipHeader = NO;
