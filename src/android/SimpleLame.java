@@ -1,4 +1,4 @@
-package CordovaPluginAudioRecorder;
+package com.mljsgto222.CordovaPluginAudioRecorder;
 
 /**
  * Created by zhengz on 16/11/24.
@@ -8,7 +8,9 @@ public class SimpleLame {
     /**
      * Close LAME.
      */
-    public native static void close();
+    public static void close() {
+        com.mljsgto222.cordova.plugin.audiorecorder.SimpleLame.close();
+    }
     /**
      * Encode buffer to mp3.
      *
@@ -24,7 +26,9 @@ public class SimpleLame {
      *         -3: lame_init_params() not called<br />
      *         -4: psycho acoustic problems
      */
-    public native static int encode(short[] buffer_l, short[] buffer_r, int samples, byte[] mp3buf);
+    public static int encode(short[] buffer_l, short[] buffer_r, int samples, byte[] mp3buf) {
+        return com.mljsgto222.cordova.plugin.audiorecorder.SimpleLame.encode(buffer_l, buffer_r, samples, mp3buf);
+    }
 
     /**
      * Flush LAME buffer.
@@ -34,7 +38,9 @@ public class SimpleLame {
      *            bytes.
      * @return number of bytes output to mp3buf. Can be 0.
      */
-    public native static int flush(byte[] mp3buf);
+    public static int flush(byte[] mp3buf) {
+        return com.mljsgto222.cordova.plugin.audiorecorder.SimpleLame.flush(mp3buf);
+    }
 
     /**
      * Initialize LAME.
@@ -62,10 +68,8 @@ public class SimpleLame {
      *            5 good quality, fast<br />
      *            7 ok quality, really fast
      */
-    public native static int init(int inSamplerate, int outChannel, int outSamplerate, int outBitrate, int quality);
-
-    static {
-        System.loadLibrary("mp3lame");
+    public static int init(int inSamplerate, int outChannel, int outSamplerate, int outBitrate, int quality) {
+        return com.mljsgto222.cordova.plugin.audiorecorder.SimpleLame.init(inSamplerate, outChannel, outSamplerate, outBitrate, quality);
     }
 
 }

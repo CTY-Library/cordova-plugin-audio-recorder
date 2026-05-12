@@ -42,4 +42,5 @@ JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame
 #ifdef __cplusplus
 }
 #endif
+
 #endif

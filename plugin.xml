@@ -9,7 +9,7 @@
     <platform name="android">
         <config-file parent="/*" target="res/xml/config.xml">
             <feature name="AudioRecorder">
-                <param name="android-package" value="CordovaPluginAudioRecorder.AudioRecorder" />
+                <param name="android-package" value="com.mljsgto222.CordovaPluginAudioRecorder.AudioRecorder" />
             </feature>
         </config-file>
         <config-file parent="/*" target="AndroidManifest.xml">
@@ -17,15 +17,16 @@
             <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
-        <source-file src="src/android/AudioRecorder.java" target-dir="src/CordovaPluginAudioRecorder" />
-        <source-file src="src/android/DataEncodeThread.java" target-dir="src/CordovaPluginAudioRecorder" />
-        <source-file src="src/android/MP3Recorder.java" target-dir="src/CordovaPluginAudioRecorder" />
-        <source-file src="src/android/PCMFormat.java" target-dir="src/CordovaPluginAudioRecorder" />
-        <source-file src="src/android/RingBuffer.java" target-dir="src/CordovaPluginAudioRecorder" />
-        <source-file src="src/android/SimpleLame.java" target-dir="src/CordovaPluginAudioRecorder" />
-        <source-file src="src/android/libs/armeabi/libmp3lame.so" target-dir="libs/armeabi" />
-        <source-file src="src/android/libs/armeabi-v7a/libmp3lame.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/arm64-v8a/libmp3lame.so" target-dir="libs/arm64-v8a" />
+        <source-file src="src/android/AudioRecorder.java" target-dir="src/com/mljsgto222/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/DataEncodeThread.java" target-dir="src/com/mljsgto222/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/MP3Recorder.java" target-dir="src/com/mljsgto222/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/PCMFormat.java" target-dir="src/com/mljsgto222/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/RingBuffer.java" target-dir="src/com/mljsgto222/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/SimpleLame.java" target-dir="src/com/mljsgto222/CordovaPluginAudioRecorder" />
+        <source-file src="src/android/legacy/SimpleLame.java" target-dir="src/com/mljsgto222/cordova/plugin/audiorecorder" />
+        <source-file src="src/android/libs/armeabi/libmp3lame.so" target-dir="src/main/jniLibs/armeabi" />
+        <source-file src="src/android/libs/armeabi-v7a/libmp3lame.so" target-dir="src/main/jniLibs/armeabi-v7a" />
+        <source-file src="src/android/libs/arm64-v8a/libmp3lame.so" target-dir="src/main/jniLibs/arm64-v8a" />
     </platform>
     <platform name="ios">
         <config-file parent="/*" target="config.xml">

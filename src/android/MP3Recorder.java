@@ -1,4 +1,4 @@
-package CordovaPluginAudioRecorder;
+package com.mljsgto222.CordovaPluginAudioRecorder;
 
 import android.app.Application;
 import android.content.Context;
@@ -89,6 +89,7 @@ public class MP3Recorder {
             if(audioRecord == null){
                 initAudioRecord();
             }
+            Log.d(TAG, "startRecord: audioRecord state=" + (audioRecord!=null?audioRecord.getState():"null"));
             audioRecord.startRecording();
             startRecordTime = (new Date()).getTime();
             new Thread(){
@@ -106,6 +107,8 @@ public class MP3Recorder {
                     try {
                         audioRecord.stop();
                         releaseAudioRecord();
+
+                        Log.d(TAG, "startRecord: recording loop exited, sending PROCESS_STOP");
 
                         Message msg = Message.obtain(encodeThread.getHandler(), DataEncodeThread.PROCESS_STOP);
                         msg.sendToTarget();
@@ -128,6 +131,7 @@ public class MP3Recorder {
     }
 
     public void stopRecord(){
+        Log.d(TAG, "stopRecord called");
         isRecording = false;
         endRecordTime = (new Date()).getTime();
     }
@@ -137,6 +141,7 @@ public class MP3Recorder {
     }
 
     public File getFile(){
+        Log.d(TAG, "getFile called, mp3File=" + (mp3File!=null?mp3File.getAbsolutePath():"null"));
         return mp3File;
     }
 
@@ -155,6 +160,7 @@ public class MP3Recorder {
             }
             long timestamp = System.currentTimeMillis();
             mp3File = new File(directory, String.valueOf(timestamp) + ".mp3");
+            Log.d(TAG, "initMP3File: created mp3File=" + mp3File.getAbsolutePath());
         }else{
             if(Environment.MEDIA_MOUNTED.equals(state)){
                 directory = context.getExternalCacheDir();
@@ -163,7 +169,9 @@ public class MP3Recorder {
             }
             try{
                 mp3File = File.createTempFile("temp", ".mp3", directory);
+                Log.d(TAG, "initMP3File: created temp mp3File=" + mp3File.getAbsolutePath());
             }catch (IOException ex){
+                Log.e(TAG, "initMP3File failed: " + ex.getMessage());
                 throw  ex;
             }
 

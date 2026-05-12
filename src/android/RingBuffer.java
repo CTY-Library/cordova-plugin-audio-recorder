@@ -1,4 +1,4 @@
-package CordovaPluginAudioRecorder;
+package com.mljsgto222.CordovaPluginAudioRecorder;
 
 import android.util.Log;
 

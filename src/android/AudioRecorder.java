@@ -1,4 +1,4 @@
-package CordovaPluginAudioRecorder;
+package com.mljsgto222.CordovaPluginAudioRecorder;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -42,6 +42,7 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
+        Log.d(TAG, "execute entered: " + action);
         if (action.equals("startRecord")) {
             startRecord(args, callbackContext);
             return true;

@@ -4,8 +4,8 @@
 static lame_global_flags *glf = NULL;
 
 JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame_init(
-		JNIEnv *env, jclass cls, jint inSamplerate, jint outChannel,
-		jint outSamplerate, jint outBitrate, jint quality) {
+	JNIEnv *env, jclass cls, jint inSamplerate, jint outChannel,
+	jint outSamplerate, jint outBitrate, jint quality) {
 	if (glf != NULL) {
 		lame_close(glf);
 		glf = NULL;
@@ -21,8 +21,8 @@ JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame
 }
 
 JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame_encode(
-		JNIEnv *env, jclass cls, jshortArray buffer_l, jshortArray buffer_r,
-		jint samples, jbyteArray mp3buf) {
+	JNIEnv *env, jclass cls, jshortArray buffer_l, jshortArray buffer_r,
+	jint samples, jbyteArray mp3buf) {
 	jshort* j_buffer_l = (*env)->GetShortArrayElements(env, buffer_l, NULL);
 
 	jshort* j_buffer_r = (*env)->GetShortArrayElements(env, buffer_r, NULL);
@@ -41,7 +41,7 @@ JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame
 }
 
 JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame_flush(
-		JNIEnv *env, jclass cls, jbyteArray mp3buf) {
+	JNIEnv *env, jclass cls, jbyteArray mp3buf) {
 	const jsize mp3buf_size = (*env)->GetArrayLength(env, mp3buf);
 	jbyte* j_mp3buf = (*env)->GetByteArrayElements(env, mp3buf, NULL);
 
@@ -53,7 +53,7 @@ JNIEXPORT jint JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame
 }
 
 JNIEXPORT void JNICALL Java_com_mljsgto222_CordovaPluginAudioRecorder_SimpleLame_close(
-		JNIEnv *env, jclass cls) {
+	JNIEnv *env, jclass cls) {
 	lame_close(glf);
 	glf = NULL;
 }
