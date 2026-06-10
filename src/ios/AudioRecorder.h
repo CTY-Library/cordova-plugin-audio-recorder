@@ -38,6 +38,7 @@
 - (void) stopRecord:(CDVInvokedUrlCommand*) command;
 - (void) hasPermission: (CDVInvokedUrlCommand*) command;
 - (void) requestPermission: (CDVInvokedUrlCommand*) command;
+- (void) openAppSettings: (CDVInvokedUrlCommand*) command;
 - (void) playSound: (CDVInvokedUrlCommand*) command;
 - (void) stopSound: (CDVInvokedUrlCommand*) command;
 @end

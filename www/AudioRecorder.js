@@ -32,6 +32,12 @@ exports.requestPermission = function(success, error){
     exec(success, error, 'AudioRecorder', 'requestPermission');
 }
 
+exports.openAppSettings = function(success, error) {
+    success = success || noop;
+    error = error || noop;
+    exec(success, error, 'AudioRecorder', 'openAppSettings');
+}
+
 exports.playSound = function(path, success, error) {
     success = success || noop;
     error = error || noop;

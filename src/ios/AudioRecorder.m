@@ -23,6 +23,22 @@
 #define STATUS_FINISH @"finish"
 #define STATUS_STOP @"stop"
 
+static BOOL AudioRecorderMicrophoneAccessGranted(AVAudioSessionRecordPermission permission)
+{
+    return permission == AVAudioSessionRecordPermissionGranted;
+}
+
+static NSString * const AudioRecorderErrorPermissionDeniedFirstTime    = @"PERMISSION_DENIED_FIRST_TIME";
+static NSString * const AudioRecorderErrorPermissionDeniedNeedSettings = @"PERMISSION_DENIED_NEED_SETTINGS";
+static NSString * const AudioRecorderErrorPermissionStateUnresolved    = @"PERMISSION_STATE_UNRESOLVED";
+static NSString * const AudioRecorderErrorOpenSettingsFailed           = @"OPEN_SETTINGS_FAILED";
+
+static CDVPluginResult *AudioRecorderPermissionErrorResult(NSString *code, NSString *message)
+{
+    NSDictionary *payload = @{ @"code": code, @"message": message };
+    return [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:payload];
+}
+
 
 @implementation AudioRecorder
 
@@ -43,38 +59,61 @@
 }
 
 - (void) hasPermission:(CDVInvokedUrlCommand *)command {
-    BOOL hasAvSesion = [self hasAvSession];
-    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:hasAvSesion];
+    [self hasAvSession]; // ensure avSession is initialized
+    AVAudioSessionRecordPermission permission = [self.avSession recordPermission];
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                        messageAsBool:AudioRecorderMicrophoneAccessGranted(permission)];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void) requestPermission:(CDVInvokedUrlCommand *)command {
-    if ([self hasAvSession]) {
+    [self hasAvSession]; // ensure avSession is initialized
+    AVAudioSessionRecordPermission permission = [self.avSession recordPermission];
+
+    if (AudioRecorderMicrophoneAccessGranted(permission)) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-    } else {
-        SEL rrpSel = NSSelectorFromString(@"requestRecordPermission:");
-        __weak AudioRecorder *recorderSelf = self;
-        __weak NSString *weakCallbackId = command.callbackId;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [self.avSession performSelector:rrpSel withObject:^(BOOL granted){
-            __strong AudioRecorder* audioRecorder = recorderSelf;
-            __strong NSString* callbackId = weakCallbackId;
-            if(granted){
-                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-                [audioRecorder.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+
+    } else if (permission == AVAudioSessionRecordPermissionDenied) {
+        NSString *message = @"Microphone access has been denied. Go to Settings > this app > Microphone to enable.";
+        NSLog(@"%@", message);
+        CDVPluginResult *pluginResult = AudioRecorderPermissionErrorResult(AudioRecorderErrorPermissionDeniedNeedSettings, message);
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+
+    } else if (permission == AVAudioSessionRecordPermissionUndetermined) {
+        [self.avSession requestRecordPermission:^(BOOL granted) {
+            CDVPluginResult *pluginResult = nil;
+            if (granted) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
             } else {
-                audioRecorder.recorder = nil;
-                if([audioRecorder hasAvSession]){
-                    [audioRecorder.avSession setActive:NO error:nil];
-                }
-                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Microphone permission denied."];
-                [audioRecorder.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+                pluginResult = AudioRecorderPermissionErrorResult(AudioRecorderErrorPermissionDeniedFirstTime,
+                                                                  @"Microphone access has been denied.");
             }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         }];
-#pragma clang diagnostic pop
+
+    } else {
+        NSString *message = @"Microphone permission state could not be resolved.";
+        CDVPluginResult *pluginResult = AudioRecorderPermissionErrorResult(AudioRecorderErrorPermissionStateUnresolved, message);
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }
+}
+
+- (void) openAppSettings:(CDVInvokedUrlCommand *)command {
+    NSURL *url = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+    if (url == nil) {
+        CDVPluginResult *pluginResult = AudioRecorderPermissionErrorResult(AudioRecorderErrorOpenSettingsFailed,
+                                                                           @"Could not build app settings URL.");
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        return;
+    }
+
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL success) {
+        CDVPluginResult *pluginResult = success
+            ? [CDVPluginResult resultWithStatus:CDVCommandStatus_OK]
+            : AudioRecorderPermissionErrorResult(AudioRecorderErrorOpenSettingsFailed, @"Could not open app settings.");
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }];
 }
 
 - (void) startRecord:(CDVInvokedUrlCommand *)command {
@@ -164,30 +203,33 @@
         }
     };
     
-    SEL rrpSel = NSSelectorFromString(@"requestRecordPermission:");
-    if(![self hasAvSession] && [self.avSession respondsToSelector:rrpSel]){
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        [self.avSession performSelector:rrpSel withObject:^(BOOL granted){
-            __strong AudioRecorder* audioRecorder = recorderSelf;
-            __strong NSString* callbackId = weakCallbackId;
-            if(granted){
-                CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-                [audioRecorder.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+    [self hasAvSession]; // ensure avSession is initialized
+    AVAudioSessionRecordPermission permission = [self.avSession recordPermission];
+
+    if (permission == AVAudioSessionRecordPermissionUndetermined) {
+        [self.avSession requestRecordPermission:^(BOOL granted) {
+            if (granted) {
+                startRecording();
             } else {
-                audioRecorder.recorder = nil;
-                if([audioRecorder hasAvSession]){
-                    [audioRecorder.avSession setActive:NO error:nil];
-                }
-                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Microphone permission denied."];
-                [audioRecorder.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+                CDVPluginResult *pluginResult = AudioRecorderPermissionErrorResult(
+                    AudioRecorderErrorPermissionDeniedFirstTime,
+                    @"Microphone access has been denied.");
+                [recorderSelf.commandDelegate sendPluginResult:pluginResult callbackId:weakCallbackId];
             }
         }];
-#pragma clang diagnostic pop
-    }else{
+    } else if (AudioRecorderMicrophoneAccessGranted(permission)) {
         startRecording();
+    } else {
+        NSString *code = (permission == AVAudioSessionRecordPermissionDenied)
+            ? AudioRecorderErrorPermissionDeniedNeedSettings
+            : AudioRecorderErrorPermissionStateUnresolved;
+        NSString *message = (permission == AVAudioSessionRecordPermissionDenied)
+            ? @"Microphone access has been denied. Go to Settings > this app > Microphone to enable."
+            : @"Microphone permission state could not be resolved.";
+        CDVPluginResult *pluginResult = AudioRecorderPermissionErrorResult(code, message);
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }
-    
+
 }
 
 - (void) stopRecord:(CDVInvokedUrlCommand *)command
