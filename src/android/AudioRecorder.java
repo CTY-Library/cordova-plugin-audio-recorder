@@ -1,11 +1,12 @@
 package com.mljsgto222.CordovaPluginAudioRecorder;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.util.Log;
 
 import org.apache.cordova.CordovaPlugin;
@@ -18,13 +19,27 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 
 /**
  * This class echoes a string called from JavaScript.
  */
 public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnCompletionListener, MediaPlayer.OnErrorListener {
     private static final String TAG = AudioRecorder.class.getName();
+
+    private static final String ACTION_START_RECORD = "startRecord";
+    private static final String ACTION_STOP_RECORD = "stopRecord";
+    private static final String ACTION_HAS_PERMISSION = "hasPermission";
+    private static final String ACTION_REQUEST_PERMISSION = "requestPermission";
+    private static final String ACTION_OPEN_APP_SETTINGS = "openAppSettings";
+    private static final String ACTION_PLAY_SOUND = "playSound";
+    private static final String ACTION_STOP_SOUND = "stopSound";
+
+    private static final int PERMISSION_REQUEST_CODE_START_RECORD = 100;
+    private static final int PERMISSION_REQUEST_CODE_ONLY = 101;
+
+    private static final String ERROR_PERMISSION_DENIED_FIRST_TIME = "PERMISSION_DENIED_FIRST_TIME";
+    private static final String ERROR_PERMISSION_DENIED_NEED_SETTINGS = "PERMISSION_DENIED_NEED_SETTINGS";
+    private static final String ERROR_OPEN_SETTINGS_FAILED = "OPEN_SETTINGS_FAILED";
 
     private static final String OUT_SAMPLING_RATE = "outSamplingRate";
     private static final String OUT_BIT_RATE = "outBitRate";
@@ -36,29 +51,33 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
     private static final String STATUS_STOP = "stop";
 
     private MP3Recorder recorder;
-    private CallbackContext callback;
+    private CallbackContext pendingPermissionCallback;
+    private CallbackContext pendingStartRecordCallback;
     private CallbackContext playSoundCallback;
     private MediaPlayer mediaPlayer;
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
         Log.d(TAG, "execute entered: " + action);
-        if (action.equals("startRecord")) {
+        if (ACTION_START_RECORD.equals(action)) {
             startRecord(args, callbackContext);
             return true;
-        } else if (action.equals("stopRecord")) {
+        } else if (ACTION_STOP_RECORD.equals(action)) {
             stopRecord(callbackContext);
             return true;
-        } else if (action.equals("hasPermission")) {
+        } else if (ACTION_HAS_PERMISSION.equals(action)) {
             hasPermission(callbackContext);
             return true;
-        } else if (action.equals("requestPermission")) {
+        } else if (ACTION_REQUEST_PERMISSION.equals(action)) {
             requestPermission(callbackContext);
             return true;
-        } else if (action.equals("playSound")) {
+        } else if (ACTION_OPEN_APP_SETTINGS.equals(action)) {
+            openAppSettings(callbackContext);
+            return true;
+        } else if (ACTION_PLAY_SOUND.equals(action)) {
             playSound(args, callbackContext);
             return true;
-        } else if (action.equals("stopSound")) {
+        } else if (ACTION_STOP_SOUND.equals(action)) {
             stopSound(callbackContext);
             return true;
         }
@@ -66,24 +85,90 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
         return false;
     }
 
-    private boolean requestRecordPermission(){
-        boolean isPermissionGranted = cordova.hasPermission(Manifest.permission.RECORD_AUDIO);
-        if(!isPermissionGranted){
-            cordova.requestPermission(this, 1, Manifest.permission.RECORD_AUDIO);
+    private boolean hasRecordPermission() {
+        return Build.VERSION.SDK_INT < 23 || cordova.hasPermission(Manifest.permission.RECORD_AUDIO);
+    }
+
+    private boolean shouldPromptToOpenSettings() {
+        if (Build.VERSION.SDK_INT < 23) {
+            return false;
         }
-        return isPermissionGranted;
+        return !cordova.getActivity().shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
+    }
+
+    private void sendPermissionError(CallbackContext callbackContext, String code, String message) {
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("code", code);
+            payload.put("message", message);
+            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, payload));
+        } catch (JSONException e) {
+            callbackContext.error(code);
+        }
+    }
+
+    private void requestRecordPermission(int requestCode) {
+        cordova.requestPermission(this, requestCode, Manifest.permission.RECORD_AUDIO);
+    }
+
+    private void startRecorderAndSendResult(CallbackContext callbackContext) {
+        try {
+            recorder.startRecord();
+            callbackContext.success();
+        } catch (IOException ex) {
+            Log.e(TAG, ex.getMessage());
+            callbackContext.error(ex.getMessage());
+        }
     }
 
     @Override
     public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
-        switch (requestCode){
-            case 1:{
-                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-                    callback.success();
+        boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+
+        if (requestCode == PERMISSION_REQUEST_CODE_START_RECORD) {
+            CallbackContext callbackContext = pendingStartRecordCallback;
+            pendingStartRecordCallback = null;
+
+            if (callbackContext == null) {
+                return;
+            }
+
+            if (granted) {
+                startRecorderAndSendResult(callbackContext);
+            } else {
+                if (shouldPromptToOpenSettings()) {
+                    sendPermissionError(callbackContext,
+                            ERROR_PERMISSION_DENIED_NEED_SETTINGS,
+                            "Microphone permission denied. Change your setting > this app > Microphone enable");
                 } else {
-                    callback.error("user permission denied");
+                    sendPermissionError(callbackContext,
+                            ERROR_PERMISSION_DENIED_FIRST_TIME,
+                            "Microphone permission denied");
                 }
-                break;
+            }
+            return;
+        }
+
+        if (requestCode == PERMISSION_REQUEST_CODE_ONLY) {
+            CallbackContext callbackContext = pendingPermissionCallback;
+            pendingPermissionCallback = null;
+
+            if (callbackContext == null) {
+                return;
+            }
+
+            if (granted) {
+                callbackContext.success();
+            } else {
+                if (shouldPromptToOpenSettings()) {
+                    sendPermissionError(callbackContext,
+                            ERROR_PERMISSION_DENIED_NEED_SETTINGS,
+                            "Microphone permission denied. Change your setting > this app > Microphone enable");
+                } else {
+                    sendPermissionError(callbackContext,
+                            ERROR_PERMISSION_DENIED_FIRST_TIME,
+                            "Microphone permission denied");
+                }
             }
         }
     }
@@ -111,15 +196,11 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
                     Log.e(TAG, ex.getMessage());
                 }
             }
-            try{
-                callback = callbackContext;
-                if(requestRecordPermission()){
-                    recorder.startRecord();
-                    callbackContext.success();
-                }
-            }catch (IOException ex){
-                Log.e(TAG, ex.getMessage());
-                callbackContext.error(ex.getMessage());
+            if (hasRecordPermission()) {
+                startRecorderAndSendResult(callbackContext);
+            } else {
+                pendingStartRecordCallback = callbackContext;
+                requestRecordPermission(PERMISSION_REQUEST_CODE_START_RECORD);
             }
         }else if(recorder.isRecording()){
             callbackContext.success();
@@ -153,24 +234,29 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
     }
 
     private void hasPermission(CallbackContext callbackContext) {
-        boolean isPermissionGranted = cordova.hasPermission(Manifest.permission.RECORD_AUDIO);
-        JSONObject json = new JSONObject();
-        try {
-            json.put("hasPermission", isPermissionGranted);
-        } catch (JSONException ex) {
-            callbackContext.error(ex.getMessage());
-            return ;
-        }
-        callbackContext.success(json);
-
+        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, hasRecordPermission()));
     }
 
     private void requestPermission(CallbackContext callbackContext) {
-
-        if (!this.requestRecordPermission()) {
-            this.callback = callbackContext;
+        if (!hasRecordPermission()) {
+            pendingPermissionCallback = callbackContext;
+            requestRecordPermission(PERMISSION_REQUEST_CODE_ONLY);
         } else {
             callbackContext.success();
+        }
+    }
+
+    private void openAppSettings(CallbackContext callbackContext) {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", cordova.getActivity().getPackageName(), null);
+        intent.setData(uri);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try {
+            cordova.getActivity().startActivity(intent);
+            callbackContext.success();
+        } catch (Exception e) {
+            sendPermissionError(callbackContext, ERROR_OPEN_SETTINGS_FAILED, "Could not open app settings.");
         }
     }
 
