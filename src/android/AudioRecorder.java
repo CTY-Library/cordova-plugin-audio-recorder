@@ -1,6 +1,7 @@
 package com.mljsgto222.CordovaPluginAudioRecorder;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
@@ -36,6 +37,9 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
 
     private static final int PERMISSION_REQUEST_CODE_START_RECORD = 100;
     private static final int PERMISSION_REQUEST_CODE_ONLY = 101;
+
+    private static final String PREFS_NAME = "cordova_audio_recorder";
+    private static final String PREF_KEY_RECORD_PERMISSION_REQUESTED = "record_permission_requested";
 
     private static final String ERROR_PERMISSION_DENIED_FIRST_TIME = "PERMISSION_DENIED_FIRST_TIME";
     private static final String ERROR_PERMISSION_DENIED_NEED_SETTINGS = "PERMISSION_DENIED_NEED_SETTINGS";
@@ -96,6 +100,39 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
         return !cordova.getActivity().shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO);
     }
 
+    private boolean hasRequestedRecordPermissionBefore() {
+        return cordova.getActivity()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(PREF_KEY_RECORD_PERMISSION_REQUESTED, false);
+    }
+
+    private void markRecordPermissionRequested() {
+        cordova.getActivity()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(PREF_KEY_RECORD_PERMISSION_REQUESTED, true)
+                .apply();
+    }
+
+    private void sendDeniedResult(CallbackContext callbackContext, boolean hasGrantResult, boolean requestedBefore) {
+        if (!hasGrantResult) {
+            sendPermissionError(callbackContext,
+                    ERROR_PERMISSION_DENIED_FIRST_TIME,
+                    "Microphone permission dialog was dismissed");
+            return;
+        }
+
+        if (requestedBefore && shouldPromptToOpenSettings()) {
+            sendPermissionError(callbackContext,
+                    ERROR_PERMISSION_DENIED_NEED_SETTINGS,
+                    "Microphone permission denied. Change your setting > this app > Microphone enable");
+        } else {
+            sendPermissionError(callbackContext,
+                    ERROR_PERMISSION_DENIED_FIRST_TIME,
+                    "Microphone permission denied");
+        }
+    }
+
     private void sendPermissionError(CallbackContext callbackContext, String code, String message) {
         JSONObject payload = new JSONObject();
         try {
@@ -124,6 +161,12 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
     @Override
     public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
         boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        boolean hasGrantResult = grantResults.length > 0;
+        boolean requestedBefore = hasRequestedRecordPermissionBefore();
+
+        if (requestCode == PERMISSION_REQUEST_CODE_START_RECORD || requestCode == PERMISSION_REQUEST_CODE_ONLY) {
+            markRecordPermissionRequested();
+        }
 
         if (requestCode == PERMISSION_REQUEST_CODE_START_RECORD) {
             CallbackContext callbackContext = pendingStartRecordCallback;
@@ -136,15 +179,7 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
             if (granted) {
                 startRecorderAndSendResult(callbackContext);
             } else {
-                if (shouldPromptToOpenSettings()) {
-                    sendPermissionError(callbackContext,
-                            ERROR_PERMISSION_DENIED_NEED_SETTINGS,
-                            "Microphone permission denied. Change your setting > this app > Microphone enable");
-                } else {
-                    sendPermissionError(callbackContext,
-                            ERROR_PERMISSION_DENIED_FIRST_TIME,
-                            "Microphone permission denied");
-                }
+                sendDeniedResult(callbackContext, hasGrantResult, requestedBefore);
             }
             return;
         }
@@ -160,15 +195,7 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
             if (granted) {
                 callbackContext.success();
             } else {
-                if (shouldPromptToOpenSettings()) {
-                    sendPermissionError(callbackContext,
-                            ERROR_PERMISSION_DENIED_NEED_SETTINGS,
-                            "Microphone permission denied. Change your setting > this app > Microphone enable");
-                } else {
-                    sendPermissionError(callbackContext,
-                            ERROR_PERMISSION_DENIED_FIRST_TIME,
-                            "Microphone permission denied");
-                }
+                sendDeniedResult(callbackContext, hasGrantResult, requestedBefore);
             }
         }
     }
