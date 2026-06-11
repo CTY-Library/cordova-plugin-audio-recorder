@@ -41,8 +41,8 @@ AudioRecorder.requestPermission(success, error);
 - __error__: requestPermission error callback.
     - Returns a structured object: `{ code, message }`.
     - Possible `code` values:
-        - `PERMISSION_DENIED_FIRST_TIME`: first-time denial, or permission dialog was dismissed without an explicit choice.
-        - `PERMISSION_DENIED_NEED_SETTINGS`: permission is denied after at least one prior request and app should guide user to system settings.
+        - `PERMISSION_DENIED_FIRST_TIME`: permission is denied but app can still re-request permission in-app.
+        - `PERMISSION_DENIED_NEED_SETTINGS`: permission cannot be resolved in current flow (including dismissed dialog), app should guide user to system settings.
         - `PERMISSION_STATE_UNRESOLVED`: iOS only, unexpected permission state.
 
 ### Open App Settings
