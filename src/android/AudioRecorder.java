@@ -97,7 +97,11 @@ public class AudioRecorder extends CordovaPlugin implements MediaPlayer.OnComple
     }
 
     private void sendDeniedResult(CallbackContext callbackContext, boolean hasGrantResult) {
-        if (!hasGrantResult || shouldPromptToOpenSettings()) {
+        if (!hasGrantResult) {
+            sendPermissionError(callbackContext,
+                    ERROR_PERMISSION_DENIED_FIRST_TIME,
+                    "Microphone permission request dismissed");
+        } else if (shouldPromptToOpenSettings()) {
             sendPermissionError(callbackContext,
                     ERROR_PERMISSION_DENIED_NEED_SETTINGS,
                     "Microphone permission denied. Change your setting > this app > Microphone enable");
